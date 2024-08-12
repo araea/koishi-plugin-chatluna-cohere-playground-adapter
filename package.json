@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-chatluna-cohere-playground-adapter",
-  "description": "",
+  "description": "Chatluna 的 Cohere Playground 适配器，无甲，免费量大管饱，输出速度快，智商低，瑟瑟文笔逆天，适合纯瑟瑟母猪流用户。",
   "version": "0.0.1",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -9,14 +9,28 @@
     "dist"
   ],
   "license": "MIT",
-  "scripts": {},
+  "contributors": [
+    "Nawyjx <3373167460@qq.com>",
+    "dingyi222666 <dingyi222666@foxmail.com>"
+  ],
+  "homepage": "https://www.npmjs.com/package/koishi-plugin-chatluna-cohere-playground-adapter?activeTab=readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/araea/koishi-plugin-chatluna-cohere-playground-adapter.git"
+  },
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "chatluna",
+    "cohere",
+    "playground",
+    "adapter",
+    "chatluna-cohere-playground-adapter",
+    "ai"
   ],
-  "devDependencies": {},
   "peerDependencies": {
-    "koishi": "^4.17.11"
+    "koishi": "^4.17.11",
+    "koishi-plugin-chatluna": "^1.0.0-beta.71"
   }
 }
