@@ -224,7 +224,7 @@ export async function apply(ctx: Context, config: Config) {
         return {
           name: model,
           type: ModelType.llm,
-          maxTokens: 4000,
+          maxTokens: 128000,
           supportChatMode: (mode: string) => {
             return mode === 'chat'
           }
@@ -236,7 +236,7 @@ export async function apply(ctx: Context, config: Config) {
       return new ChatLunaChatModel({
         requester: this._requester,
         model,
-        modelMaxContextSize: 4000,
+        modelMaxContextSize: 128000,
         timeout: this._config.timeout,
         maxRetries: this._config.maxRetries,
         llmType: 'cohere',
