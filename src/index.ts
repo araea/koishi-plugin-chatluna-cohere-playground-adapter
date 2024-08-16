@@ -14,37 +14,56 @@ import {ChatLunaError, ChatLunaErrorCode} from "koishi-plugin-chatluna/utils/err
 export const name = 'chatluna-cohere-playground-adapter'
 export const usage = `## 🌈 使用
 
-1. **获取 authorization：**
+1. **获取 API Key：**
 
-- 访问 [Cohere Playground](https://dashboard.cohere.com/playground/chat) 并登录。
-- 打开浏览器开发者工具 (F12)，切换到 "Network" (网络) 选项卡。
-- 在 playground 中进行一次对话，找到名为 \`Session\` 的网络请求。
-- 在请求头 (Request Headers) 中，复制 \`authorization\` 的值。
-  - 格式类似: \`Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\`
+- 访问 [Cohere](https://dashboard.cohere.com/) 注册并登录。
+- 登录后前往 [Cohere API Key](https://dashboard.cohere.com/api-keys) 页面，复制 \`Trial key\`。
+  - \`Trial key\` 形如 \`iD35z8XuYzI1KKGoQ9EdzOSoV0SKPWLCHrUv61OD\`。
 
-2. **配置插件：** 在插件设置中填入获取到的 \`authorization\`。
+2. **配置插件：** 在本插件请求设置中添加获取到的 \`Trial key\`。
 
 3. **开始使用！** 现在您可以通过 Chatluna 与 Cohere AI 进行对话了。
 
-- 仅推荐使用 \`command-r-plus\` 模型，其他模型不予置评。`
+- 仅推荐使用 \`command-r-plus\` 模型，其他模型不予置评。
+- \`Cohere\` 每个账号每月有 1000 次免费请求，超出后将无法使用。
+  - 小贴士：使用 [Gmail 临时邮箱](https://www.emailtick.com/) 注册 Cohere 账号，以获取更多免费请求次数。`
 export const inject = {
   required: ['chatluna'],
 }
 
 // pz*
 export interface Config extends ChatLunaPlugin.Config {
-  authorizations: string[];
+  apiKeys: string[];
   temperature: number;
+  k: number;
+  p: number;
+  frequency_penalty: number;
+  presence_penalty: number;
+  documents: Document[];
 }
 
 export const Config: Schema<Config> = Schema.intersect([
   ChatLunaPlugin.Config,
   Schema.object({
-    authorizations: Schema.array(
+    apiKeys: Schema.array(
       Schema.string().role('secret').required()
-    ).description('Cohere 授权码。'),
-    temperature: Schema.number().max(1).min(0).step(0.1).default(1).description('回复温度，越高越随机。'),
-  }).description('请求设置')
+    ).description('Cohere API Keys。'),
+  }).description('请求设置'),
+  Schema.object({
+    k: Schema.number().max(500).min(0).default(0).description('k 参数。确保在每个步骤中只考虑最有可能的 k 个 tokens。默认 0，范围 0-500。'),
+    p: Schema.number().max(0.99).min(0.01).default(0.75).description('p 参数。确保在每一步生成时，只考虑总概率质量为 p 的可能性最大的 tokens。如果 k 和 p 都启用，则 p 在 k 之后执行。默认 0.75。范围 0.01-0.99。 '),
+    temperature: Schema.number().max(1).min(0).step(0.1).default(1).description('回复温度，越高越随机。随机性可以通过增加 p 参数的值来进一步最大化。范围 0-1。'),
+    frequency_penalty: Schema.number().max(1).min(0).step(0.1).default(0).description('频率惩罚。用于减少生成的重复性。值越高，越随机，且跟 tokens 重复出现的次数成比例。默认 0，范围 0-1。'),
+    presence_penalty: Schema.number().max(1).min(0).step(0.1).default(0).description('存在惩罚。用于减少生成的重复性。与频率惩罚类似，但这种惩罚适用于所有已经出现的 tokens，无论它们的频率（出现次数）如何。默认 0，范围 0-1。'),
+    documents: Schema.array(Schema.object({
+      title: Schema.string(),
+      text: Schema.string(),
+    })).role('table').description(`文档列表。一个模型可以引用的相关文档列表，以生成更准确的回复。每个文档都是一个字符串-字符串字典。示例：
+\`[
+  {“title”：“高企鹅”，“text”：“帝企鹅最高。" },
+  {“title”：“企鹅栖息地”，“text”：“帝企鹅只生活在南极洲。" },
+]\` `),
+  }).description('模型设置')
 ]) as any
 
 
@@ -58,15 +77,29 @@ interface GetKeyResponse {
   rawKey: string;
 }
 
+interface Document {
+  title: string;
+  text: string;
+}
+
 interface ChatRequest {
   message: string;
-  temperature: number;
-  chat_history: any[];
-  model: string;
-  preamble: string;
-  connectors: any[];
   stream: boolean;
-  prompt_truncation: string;
+  chat_history?: any[];
+  model?: string;
+  preamble?: string;
+  connectors?: any[];
+  prompt_truncation?: string;
+
+  max_tokens?: number;
+
+  k?: number;
+  p?: number;
+  temperature?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  documents?: Document[];
+
 }
 
 // zhs*
@@ -125,8 +158,8 @@ export async function apply(ctx: Context, config: Config) {
 
     private async _completion(params: ModelRequestParams) {
       try {
-        const apiKey = await getApiKey(this._config.apiKey);
-        const chatResponse = await this.chat(apiKey, params.model, params.input as BaseMessage[]);
+        // const apiKey = await getApiKey(this._config.apiKey);
+        const chatResponse = await this.chat(this._config.apiKey, params.model, params.input as BaseMessage[]);
 
         const results: string[] = [chatResponse]
 
@@ -141,13 +174,19 @@ export async function apply(ctx: Context, config: Config) {
       const {preamble, chat_history} = processMessages(messages);
       const bodyJson: ChatRequest = {
         message: message,
-        temperature: config.temperature,
         chat_history: chat_history,
         model: model,
         preamble: preamble,
         connectors: [],
         stream: false,
-        prompt_truncation: "OFF"
+        prompt_truncation: "OFF",
+
+        temperature: config.temperature,
+        k: config.k,
+        p: config.p,
+        frequency_penalty: config.frequency_penalty,
+        presence_penalty: config.presence_penalty,
+        documents: config.documents || [],
       };
 
       const response = await this._plugin.fetch("https://api.cohere.com/v1/chat", {
@@ -250,7 +289,7 @@ export async function apply(ctx: Context, config: Config) {
     await plugin.registerToService()
 
     await plugin.parseConfig((config) => {
-      return config.authorizations.map((apiKey) => {
+      return config.apiKeys.map((apiKey) => {
         return {
           apiKey,
           platform,
