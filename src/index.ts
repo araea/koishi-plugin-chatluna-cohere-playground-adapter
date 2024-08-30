@@ -37,9 +37,10 @@ export interface Config extends ChatLunaPlugin.Config {
   temperature: number;
   k: number;
   p: number;
-  frequency_penalty: number;
-  presence_penalty: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
   documents: Document[];
+  safetyMode: string; // CONTEXTUAL, STRICT, NONE
 }
 
 export const Config: Schema<Config> = Schema.intersect([
@@ -53,8 +54,9 @@ export const Config: Schema<Config> = Schema.intersect([
     k: Schema.number().max(500).min(0).default(0).description('k 参数。确保在每个步骤中只考虑最有可能的 k 个 tokens。默认 0，范围 0-500。'),
     p: Schema.number().max(0.99).min(0.01).default(0.75).description('p 参数。确保在每一步生成时，只考虑总概率质量为 p 的可能性最大的 tokens。如果 k 和 p 都启用，则 p 在 k 之后执行。默认 0.75。范围 0.01-0.99。 '),
     temperature: Schema.number().max(1).min(0).step(0.1).default(1).description('回复温度，越高越随机。随机性可以通过增加 p 参数的值来进一步最大化。范围 0-1。'),
-    frequency_penalty: Schema.number().max(1).min(0).step(0.1).default(0).description('频率惩罚。用于减少生成的重复性。值越高，越随机，且跟 tokens 重复出现的次数成比例。默认 0，范围 0-1。'),
-    presence_penalty: Schema.number().max(1).min(0).step(0.1).default(0).description('存在惩罚。用于减少生成的重复性。与频率惩罚类似，但这种惩罚适用于所有已经出现的 tokens，无论它们的频率（出现次数）如何。默认 0，范围 0-1。'),
+    frequencyPenalty: Schema.number().max(1).min(0).step(0.1).default(0).description('频率惩罚。用于减少生成的重复性。值越高，越随机，且跟 tokens 重复出现的次数成比例。默认 0，范围 0-1。'),
+    presencePenalty: Schema.number().max(1).min(0).step(0.1).default(0).description('存在惩罚。用于减少生成的重复性。与频率惩罚类似，但这种惩罚适用于所有已经出现的 tokens，无论它们的频率（出现次数）如何。默认 0，范围 0-1。'),
+    safetyMode: Schema.union(['CONTEXTUAL', 'STRICT', 'NONE']).default('NONE').description('安全模式。安全模式暂时不能与文档列表一起配置。'),
     documents: Schema.array(Schema.object({
       title: Schema.string(),
       text: Schema.string(),
@@ -98,8 +100,8 @@ interface ChatRequest {
   temperature?: number;
   frequency_penalty?: number;
   presence_penalty?: number;
+  safety_mode?: string;
   documents?: Document[];
-
 }
 
 // zhs*
@@ -184,10 +186,14 @@ export async function apply(ctx: Context, config: Config) {
         temperature: config.temperature,
         k: config.k,
         p: config.p,
-        frequency_penalty: config.frequency_penalty,
-        presence_penalty: config.presence_penalty,
+        frequency_penalty: config.frequencyPenalty,
+        presence_penalty: config.presencePenalty,
         documents: config.documents || [],
       };
+
+      if (model === 'command-r-plus-08-2024' || model === 'command-r-08-2024') {
+        bodyJson.safety_mode = config.safetyMode
+      }
 
       const response = await this._plugin.fetch("https://api.cohere.com/v1/chat", {
         method: "POST",
@@ -259,7 +265,7 @@ export async function apply(ctx: Context, config: Config) {
     }
 
     async refreshModels(): Promise<ModelInfo[]> {
-      return ['command-r-plus', 'command-r', 'command', 'command-nightly', 'command-light', 'command-light-nightly', 'c4ai-aya-23'].map((model) => {
+      return ['command-r-plus-08-2024', 'command-r-04-2024', 'command-r-plus', 'command-r-08-2024', 'command-r-03-2024', 'command-r', 'command', 'command-nightly', 'command-light', 'command-light-nightly'].map((model) => {
         return {
           name: model,
           type: ModelType.llm,

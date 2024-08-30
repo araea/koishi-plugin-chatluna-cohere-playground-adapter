@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-chatluna-cohere-playground-adapter",
   "description": "Chatluna 的 Cohere 适配器，无甲，免费量大管饱，输出速度快，智商低，瑟瑟文笔逆天，适合纯瑟瑟母猪流用户。",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -30,10 +30,10 @@
     "ai"
   ],
   "dependencies": {
-    "@langchain/core": "^0.2.24"
+    "@langchain/core": "^0.2.31"
   },
   "peerDependencies": {
     "koishi": "^4.17.12",
-    "koishi-plugin-chatluna": "^1.0.0-beta.74"
+    "koishi-plugin-chatluna": "^1.0.0-beta.85"
   }
 }
