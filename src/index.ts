@@ -12,21 +12,20 @@ import {ChatLunaChatModel} from "koishi-plugin-chatluna/llm-core/platform/model"
 import {ChatLunaError, ChatLunaErrorCode} from "koishi-plugin-chatluna/utils/error";
 
 export const name = 'chatluna-cohere-playground-adapter'
-export const usage = `## 🌈 使用
+export const usage = `## 使用
 
-1. **获取 API Key：**
+1. 获取 API Key：
 
-- 访问 [Cohere](https://dashboard.cohere.com/) 注册并登录。
-- 登录后前往 [Cohere API Key](https://dashboard.cohere.com/api-keys) 页面，复制 \`Trial key\`。
+- 登录 [Cohere](https://dashboard.cohere.com/)。
+- 前往 [Cohere API Key](https://dashboard.cohere.com/api-keys) 页面，复制 \`Trial key\`。
   - \`Trial key\` 形如 \`iD35z8XuYzI1KKGoQ9EdzOSoV0SKPWLCHrUv61OD\`。
 
-2. **配置插件：** 在本插件请求设置中添加获取到的 \`Trial key\`。
+## 注意事项
 
-3. **开始使用！** 现在您可以通过 Chatluna 与 Cohere AI 进行对话了。
-
-- 仅推荐使用 \`command-r-plus\` 模型，其他模型不予置评。
-- \`Cohere\` 每个账号每月有 1000 次免费请求，超出后将无法使用。
-  - 小贴士：使用 [Gmail 临时邮箱](https://www.emailtick.com/) 注册 Cohere 账号，以获取更多免费请求次数。`
+- 国内需要科学上网环境。
+- \`Cohere\` 每个账号有 \`1000 次/月\` 免费请求，超出后将无法使用。
+  - 可使用 [Gmail 临时邮箱](https://www.emailtick.com/) 注册 Cohere 账号，以获取更多免费次数。
+`
 export const inject = {
   required: ['chatluna'],
 }
